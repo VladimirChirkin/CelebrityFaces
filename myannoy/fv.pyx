@@ -20,8 +20,33 @@ cdef class FeatureVec:
         if self._thisptr != NULL:
             del self._thisptr
     
-    def PushBack(self, feature):
+    cpdef append(self, feature):
         self._thisptr.PushBack(feature)
 
-    cpdef double Norm(self):
+    cpdef double norm(self):
         return self._thisptr.Norm()
+
+    cdef double at(self, int index):
+        return self._thisptr.At(index)
+
+    def __getitem__(self, int index):
+        return self.at(index)
+
+    cdef size(self):
+        return self._thisptr.Size()
+
+    def __len__(self):
+        return self.size()
+
+    def __str__(self):
+        vals = [str(self[i]) for i in range(len(self))]
+        return ' '.join(vals)
+            
+    cdef _dot(self, other):
+        FeatureVector* newval = self._thisptr.dot(other._thisptr)
+        if self._thisptr != NULL:
+            del self._thisptr
+        self._thisptr = newval
+
+    def dot(self, other):
+        self._dot(other)
