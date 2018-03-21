@@ -139,6 +139,14 @@ struct Node {
   int left_point;
   int right_point;
   std::vector<int> leaf_ids;
+  ~Node() {
+    if (left != nullptr) {
+      delete left;
+    }
+    if (right != nullptr) {
+      delete right;
+    }
+  }
 };
 
 
@@ -303,7 +311,7 @@ int main() {
   std::cout << "Opening embeddings..." << std::endl;
   int tim = clock();
   std::ifstream file;
-  file.open("embeddings.txt");
+  file.open("../../myannoy/embeddings.txt");
   std::vector<FeatureVector> embs = read_embeddings(file);
   // std::vector<FeatureVector> embs = GenerateEmbeddings(1000, 10);
   std::cout << "time: " << 1000 * (clock() - tim) / CLOCKS_PER_SEC

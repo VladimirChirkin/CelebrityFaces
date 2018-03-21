@@ -2,4 +2,4 @@
 from distutils.core import setup
 from Cython.Build import cythonize
 
-setup(name='FeatureVector', ext_modules=cythonize('fv.pyx'))
+setup(name='Annoy', ext_modules=cythonize('annoyforest.pyx'))
