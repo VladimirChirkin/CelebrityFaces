@@ -43,7 +43,7 @@ double FeatureVector::Dot(const FeatureVector& other) const {
 }
 
 double FeatureVector::Cos(const FeatureVector& other) const {
-  return Dot(other) / (Norm() * other.Norm());
+  return Dot(other) / (Norm() * other.Norm() + 0.000001);
 }
 
 const FeatureVector FeatureVector::operator+(
@@ -135,6 +135,7 @@ Node* AnnoyTree::Root() {
 void AnnoyTree::_fit(Node* node, std::vector<int> ids) {
   if (ids.size() < _node_size) {
     node->leaf_ids = ids;
+    node->leaf = true;
   } else {
     int left_point = 0, right_point = 0;
     while (left_point == right_point) {
@@ -159,7 +160,7 @@ void AnnoyTree::_fit(Node* node, std::vector<int> ids) {
 
 std::vector<int> AnnoyTree::_find(
     Node* node, const FeatureVector& emb) {
-  if (node->leaf_ids.size() > 0) {
+  if (node->leaf) {
     std::vector<std::pair<double, int>> pairs;
     for (int id : node->leaf_ids) {
       double score = emb.EuclideanDistance(_embeddings->at(id));
@@ -183,11 +184,12 @@ std::vector<int> AnnoyTree::_find(
   
 
 AnnoyForest::AnnoyForest(int node_size, int n_trees) :
-      _node_size(node_size), _n_trees(n_trees), _gen(std::mt19937(time(0))) {}
+      _node_size(node_size), _n_trees(n_trees) {}
 
 void AnnoyForest::Fit(const std::vector<FeatureVector>& embeddings) {
+  _gen.seed(0);
   _embeddings = embeddings;
-  _uin = std::uniform_int_distribution<int>(0, embeddings.size());
+  _uin = std::uniform_int_distribution<int>(0, embeddings.size() - 1);
   for (int tree_id = 0; tree_id < _n_trees; ++tree_id) {
     _trees.push_back(AnnoyTree(_node_size, _gen, _uin));
   }
@@ -200,6 +202,11 @@ void AnnoyForest::Fit(const std::vector<FeatureVector>& embeddings) {
   }
 }
 
+std::vector<int> AnnoyForest::TreeFind(int tree_id,
+    const FeatureVector& emb) {
+  return _trees[tree_id].Find(emb);
+}
+
 std::vector<int> AnnoyForest::Find(
     const FeatureVector& emb, int n_search) {
   std::priority_queue<std::pair<double, Node*>> que;
@@ -210,7 +217,7 @@ std::vector<int> AnnoyForest::Find(
   while (neighbors.size() < n_search) {
     Node* node = que.top().second;
     que.pop();
-    if (!node->leaf_ids.empty()) {
+    if (node->leaf) {
       for (int id : node->leaf_ids) {
         neighbors.insert(id);
       }
@@ -223,11 +230,13 @@ std::vector<int> AnnoyForest::Find(
   }
   std::vector<std::pair<double, int>> pairs;
   for (int id : neighbors) {
-    double score = emb.EuclideanDistance(_embeddings.at(id));
-    pairs.push_back(std::make_pair(score, id));
+     double score = emb.EuclideanDistance(_embeddings.at(id));
+     pairs.push_back(std::make_pair(score, id));
   }
   std::sort(pairs.begin(), pairs.end());
   std::vector<int> answer;
+  answer.push_back(0);
+  
   for (auto pair : pairs) {
      answer.push_back(pair.second);
   }

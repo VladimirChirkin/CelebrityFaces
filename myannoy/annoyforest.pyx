@@ -1,15 +1,19 @@
 # distutils: language=c++
 # distutils: sources=annoy.cpp
-# distutils: extra_compile_args= -std=c++11
+# distutils: extra_compile_args= -std=c++11 -fopenmp
+# distutils: extra_link_args= -fopenmp
 
 from cython.operator cimport dereference as deref
 from cpython.array cimport array
+cimport numpy as cnp
+import numpy as np
 
 cdef extern from "<vector>" namespace "std":
     cdef cppclass vector[T]:
         vector() except +
         void push_back(T&)
         T operator[](int i)
+        int size()
 
 cdef extern from "annoy.h":
     cdef cppclass FeatureVector:
@@ -34,18 +38,25 @@ cdef class Annoy:
     cpdef void fit(self, double[:, :] mv):
         cdef vector[FeatureVector] inp
         cdef int i, j, cur = 0
-        inp.push_back(FeatureVector())
         for i in range(len(mv)):
+            inp.push_back(FeatureVector())
             for j in range(len(mv[0])):
                 inp[cur].PushBack(mv[i, j])
-            inp.push_back(FeatureVector())
             cur += 1
         self._thisptr.Fit(inp)
 
-    cpdef int find(self, double[:] mv, int n_search):
+    cdef vector[int] _find(self, double[:] mv, int n_search):
         cdef FeatureVector inp
         cdef double elem
         for elem in mv:
             inp.PushBack(elem)
-        cdef vector[int] answer = self._thisptr.Find(inp, n_search)
-        return answer[0]
+        return self._thisptr.Find(inp, n_search)
+
+    def find(self, emb, n_search):
+        cdef vector[int] answer = self._find(emb, n_search)
+        arranswer = np.zeros((answer.size(),), int)
+        for i in range(len(arranswer)):
+            arranswer[i] = answer[i]
+  
+        return arranswer
+

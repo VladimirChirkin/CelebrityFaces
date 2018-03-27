@@ -8,6 +8,7 @@
 #include<algorithm>
 #include<queue>
 #include<unordered_set>
+#include<cassert>
 #ifndef ANNOY_H
 #define ANNOY_H
 
@@ -57,6 +58,7 @@ struct Node {
   int left_point;
   int right_point;
   std::vector<int> leaf_ids;
+  bool leaf = false;
   ~Node();
 };
 
@@ -89,6 +91,9 @@ class AnnoyForest {
   AnnoyForest(int node_size, int n_trees);
 
   void Fit(const std::vector<FeatureVector>& embeddings);
+
+  std::vector<int> TreeFind(int tree_id, 
+      const FeatureVector& emb);
 
   std::vector<int> Find(const FeatureVector& emb, int n_search);
 
