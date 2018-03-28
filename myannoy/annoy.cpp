@@ -235,7 +235,6 @@ std::vector<int> AnnoyForest::Find(
   }
   std::sort(pairs.begin(), pairs.end());
   std::vector<int> answer;
-  answer.push_back(0);
   
   for (auto pair : pairs) {
      answer.push_back(pair.second);
