@@ -101,19 +101,9 @@ void SplitFeatures(int id_left, int id_right,
 }
 
   
-Node::~Node() {
-  if (left != nullptr) {
-    delete left;
-  }
-  if (right != nullptr) {
-    delete right;
-  }
-}
-
-
 AnnoyTree::AnnoyTree(int node_size, std::mt19937& gen, 
           std::uniform_int_distribution<int>& uin) :
-    _node_size(node_size), _gen(gen), _uin(uin) {}
+    _node_size(node_size), _gen(gen), _uin(uin), _root(std::shared_ptr<Node>(new Node)) {}
 
 void AnnoyTree::Fit(std::vector<FeatureVector>* embeddings) {
   _embeddings = embeddings;
@@ -121,18 +111,18 @@ void AnnoyTree::Fit(std::vector<FeatureVector>* embeddings) {
   for (int id = 0; id < embeddings->size(); ++id) {
     ids.push_back(id);
   }
-  _fit(&_root, ids);
+  _fit(_root, ids);
 }
 
 std::vector<int> AnnoyTree::Find(const FeatureVector& emb) {
-  return _find(&_root, emb);
+  return _find(_root, emb);
 }
 
-Node* AnnoyTree::Root() {
-  return &_root;
+std::shared_ptr<Node> AnnoyTree::Root() {
+  return _root;
 }
 
-void AnnoyTree::_fit(Node* node, std::vector<int> ids) {
+void AnnoyTree::_fit(const std::shared_ptr<Node>& node, std::vector<int> ids) {
   if (ids.size() < _node_size) {
     node->leaf_ids = ids;
     node->leaf = true;
@@ -147,19 +137,17 @@ void AnnoyTree::_fit(Node* node, std::vector<int> ids) {
                    std::back_inserter(ids_left),
                    std::back_inserter(ids_right),
                    _embeddings);
-    Node* left = new Node;
-    Node* right = new Node;
-    node->left = left;
-    node->right = right;
+    node->left = std::shared_ptr<Node>(new Node);
+    node->right = std::shared_ptr<Node>(new Node);
     node->left_point = left_point;
     node->right_point = right_point;
-    _fit(left, ids_left);
-    _fit(right, ids_right);
+    _fit(node->left, ids_left);
+    _fit(node->right, ids_right);
   }
 }
 
 std::vector<int> AnnoyTree::_find(
-    Node* node, const FeatureVector& emb) {
+    const std::shared_ptr<Node>& node, const FeatureVector& emb) {
   if (node->leaf) {
     std::vector<std::pair<double, int>> pairs;
     for (int id : node->leaf_ids) {
@@ -187,7 +175,7 @@ AnnoyForest::AnnoyForest(int node_size, int n_trees) :
       _node_size(node_size), _n_trees(n_trees) {}
 
 void AnnoyForest::Fit(const std::vector<FeatureVector>& embeddings) {
-  _gen.seed(0);
+  _gen.seed(time(0));
   _embeddings = embeddings;
   _uin = std::uniform_int_distribution<int>(0, embeddings.size() - 1);
   for (int tree_id = 0; tree_id < _n_trees; ++tree_id) {
@@ -209,13 +197,13 @@ std::vector<int> AnnoyForest::TreeFind(int tree_id,
 
 std::vector<int> AnnoyForest::Find(
     const FeatureVector& emb, int n_search) {
-  std::priority_queue<std::pair<double, Node*>> que;
+  std::priority_queue<std::pair<double, std::shared_ptr<Node>>> que;
   std::unordered_set<int> neighbors;
   for (int tree_id = 0; tree_id < _n_trees; ++tree_id) {
     que.push(std::make_pair(10000, _trees[tree_id].Root()));
   }
   while (neighbors.size() < n_search) {
-    Node* node = que.top().second;
+    std::shared_ptr<Node> node = que.top().second;
     que.pop();
     if (node->leaf) {
       for (int id : node->leaf_ids) {

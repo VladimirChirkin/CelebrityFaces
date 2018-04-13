@@ -9,6 +9,7 @@
 #include<queue>
 #include<unordered_set>
 #include<cassert>
+#include<memory>
 #ifndef ANNOY_H
 #define ANNOY_H
 
@@ -53,13 +54,12 @@ void SplitFeatures(int id_left, int id_right,
                    std::vector<FeatureVector>* embeddings);
 
 struct Node {
-  Node* left = nullptr;
-  Node* right = nullptr;
+  std::shared_ptr<Node> left;
+  std::shared_ptr<Node> right;
   int left_point;
   int right_point;
   std::vector<int> leaf_ids;
   bool leaf = false;
-  ~Node();
 };
 
 
@@ -72,15 +72,15 @@ class AnnoyTree {
 
   std::vector<int> Find(const FeatureVector& emb);
 
-  Node* Root();
+  std::shared_ptr<Node> Root();
 
  private:
-  void _fit(Node* node, std::vector<int> ids);
+  void _fit(const std::shared_ptr<Node>& node, std::vector<int> ids);
 
-  std::vector<int> _find(Node* node, const FeatureVector& emb);
+  std::vector<int> _find(const std::shared_ptr<Node>& node, const FeatureVector& emb);
 
   int _node_size;
-  Node _root;
+  std::shared_ptr<Node> _root;
   std::mt19937& _gen;
   std::uniform_int_distribution<int>& _uin;
   std::vector<FeatureVector>* _embeddings;
