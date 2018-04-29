@@ -51,7 +51,8 @@ void SplitFeatures(int id_left, int id_right,
                    std::vector<int>::iterator end,
                    std::back_insert_iterator<std::vector<int>> out_left,
                    std::back_insert_iterator<std::vector<int>> out_right,
-                   std::vector<FeatureVector>* embeddings);
+                   std::vector<FeatureVector>* embeddings,
+                   std::mt19937& gen);
 
 struct Node {
   std::shared_ptr<Node> left;

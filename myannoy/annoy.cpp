@@ -28,8 +28,11 @@ double FeatureVector::At(int index) const {
 double FeatureVector::EuclideanDistance(
     const FeatureVector& other) const {
   double sumd = 0;
+  double elem = 0;
   for (int index = 0; index < Size(); ++index) {
-    sumd += (At(index) - other.At(index)) * (At(index) - other.At(index));
+    elem = (At(index) - other.At(index)) * (At(index) - other.At(index));
+    // std::cout << " d(" << At(index) << " " << other.At(index) << " " << elem << ") ";
+    sumd += elem;
   }
   return std::sqrt(sumd);
 }
@@ -86,18 +89,47 @@ void SplitFeatures(int id_left, int id_right,
                    std::vector<int>::iterator end,
                    std::back_insert_iterator<std::vector<int>> out_left,
                    std::back_insert_iterator<std::vector<int>> out_right,
-                   std::vector<FeatureVector>* embeddings) {
+                   std::vector<FeatureVector>* embeddings,
+                   std::mt19937& gen) {
+  // std::cout << " Emb_left:(";
+  // for (int i = 0; i < embeddings->at(id_left).Size(); ++i) {
+     // std::cout << embeddings->at(id_left).At(i) << "|";
+  // }
+  // std::cout << ") ";
+  // std::cout << " Emb_right:(";
+  // for (int i = 0; i < embeddings->at(id_right).Size(); ++i) {
+     // std::cout << embeddings->at(id_right).At(i) << "|";
+  // }
+  // std::cout << ") ";
   for (auto iter = begin; iter != end; ++iter) {
     double left = embeddings->at(*iter).EuclideanDistance(
                        embeddings->at(id_left));
     double right = embeddings->at(*iter).EuclideanDistance(
                        embeddings->at(id_right));
+    double margin = embeddings->at(*iter).Margin(embeddings->at(id_left),
+        embeddings->at(id_right));
+    
+    // std::cout << " Emb:(";
+    // for (int i = 0; i < embeddings->at(*iter).Size(); ++i) {
+       // std::cout << embeddings->at(*iter).At(i) << "|";
+    // }
+    // std::cout << ") ";
+    
+    // std::cout << (*iter) <<  "(" << left << "-" << right << "-" << margin <<")";
     if (left < right) {
       *out_left = *iter;
-    } else {
+    } else if (left > right) {
       *out_right = *iter;
+    } else {
+      std::uniform_int_distribution<int> uin(0, 2);
+      if (uin(gen) == 0) {
+        *out_left = *iter;
+      } else {
+        *out_right = *iter;
+      }
     }
   }
+  // std::cout << std::endl;
 }
 
   
@@ -123,20 +155,31 @@ std::shared_ptr<Node> AnnoyTree::Root() {
 }
 
 void AnnoyTree::_fit(const std::shared_ptr<Node>& node, std::vector<int> ids) {
-  if (ids.size() < _node_size) {
+  // std::cout << "_" << ids.size() << std::endl;
+  // for (int i : ids) {
+    // std::cout << i << "|";
+    // for (int j = 0; j < _embeddings->at(0).Size(); ++j) {
+      // std::cout << _embeddings->at(i).At(j)  << " ";
+    // }
+    // std::cout << "||";
+  // }
+  // std::cout << std::endl;
+  if (ids.size() <= _node_size) {
     node->leaf_ids = ids;
     node->leaf = true;
   } else {
     int left_point = 0, right_point = 0;
     while (left_point == right_point) {
-      left_point = _uin(_gen) % ids.size();
-      right_point = _uin(_gen) % ids.size();
+      left_point = ids.at(_uin(_gen) % ids.size());
+      right_point = ids.at(_uin(_gen) % ids.size());
+      // std::cout << left_point << " " << right_point << " | ";
     }
+    // std::cout << std::endl;
     std::vector<int> ids_left, ids_right;
     SplitFeatures(left_point, right_point, ids.begin(), ids.end(),
                    std::back_inserter(ids_left),
                    std::back_inserter(ids_right),
-                   _embeddings);
+                   _embeddings, _gen);
     node->left = std::shared_ptr<Node>(new Node);
     node->right = std::shared_ptr<Node>(new Node);
     node->left_point = left_point;
