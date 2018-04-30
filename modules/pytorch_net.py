@@ -5,10 +5,10 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-class MyVGG(nn.Module):
+class MyNet(nn.Module):
     
     def __init__(self):
-        super(MyVGG, self).__init__()
+        super(MyNet, self).__init__()
         self.features = torchvision.models.squeezenet1_0(pretrained=False).features
         self.embeddings = nn.Sequential(nn.Linear(66560, 1024), nn.ReLU(inplace=True), nn.Dropout(0.5),
                                         nn.Linear(1024, 128))
