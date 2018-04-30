@@ -240,10 +240,11 @@ std::vector<int> AnnoyForest::TreeFind(int tree_id,
 
 std::vector<int> AnnoyForest::Find(
     const FeatureVector& emb, int n_search) {
+  double kInfPrio = 10000;
   std::priority_queue<std::pair<double, std::shared_ptr<Node>>> que;
   std::unordered_set<int> neighbors;
   for (int tree_id = 0; tree_id < _n_trees; ++tree_id) {
-    que.push(std::make_pair(10000, _trees[tree_id].Root()));
+    que.push(std::make_pair(kInfPrio, _trees[tree_id].Root()));
   }
   while (neighbors.size() < n_search) {
     std::shared_ptr<Node> node = que.top().second;
