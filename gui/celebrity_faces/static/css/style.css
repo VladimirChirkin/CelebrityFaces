@@ -1,0 +1,26 @@
+#browsebutton {
+    background-color: white;
+}
+
+#my-file-selector {
+    display: none;
+}
+#customFile .custom-file-control:lang(en)::after {
+  content: "Select file...";
+}
+
+#customFile .custom-file-control:lang(en)::before {
+  content: "Click me";
+}
+
+/*when a value is selected, this class removes the content */
+.custom-file-name:after {
+  content: attr(data-content) !important;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  padding: 0.5rem 1rem;
+}
